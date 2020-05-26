@@ -28,6 +28,7 @@
 ;;; Code:
 
 (require 'dap-mode)
+(require 'pyvenv)
 
 (defcustom dap-python-default-debug-port 32000
   "The debug port which will be used for ptvsd process.
@@ -47,6 +48,12 @@ For example you may set it to `xterm -e' which will pop xterm console when you a
   :group 'dap-python
   :risky t
   :type 'string)
+
+(defun dap-python--pyvenv-executable-find (command)
+  "Find executable taking virtual environment into account"
+  (when pyvenv-virtual-env
+      (let ((python-exec-path (f-join pyvenv-virtual-env "bin" command)))
+        (when (file-regular-p python-exec-path) python-exec-path))))
 
 (defun dap-python--pyenv-executable-find (command)
   "Find executable taking pyenv shims into account.
@@ -180,7 +187,8 @@ as the pyenv version then also return nil. This works around https://github.com/
   "Populate CONF with the required arguments."
   (let* ((host "localhost")
          (debug-port (dap--find-available-port))
-         (python-executable (dap-python--pyenv-executable-find dap-python-executable))
+         (python-executable (or (dap-python--pyvenv-executable-find dap-python-executable)
+                                (dap-python--pyenv-executable-find dap-python-executable)))
          (python-args (or (plist-get conf :args) ""))
          (program (or (plist-get conf :target-module)
                       (plist-get conf :program)
@@ -207,7 +215,8 @@ as the pyenv version then also return nil. This works around https://github.com/
   "Populate CONF with the required arguments."
   (let* ((host "localhost")
          (debug-port (dap--find-available-port))
-         (python-executable (dap-python--pyenv-executable-find dap-python-executable))
+         (python-executable (or (dap-python--pyvenv-executable-find dap-python-executable)
+                                (dap-python--pyenv-executable-find dap-python-executable)))
          (python-args (or (plist-get conf :args) ""))
          (program (concat (buffer-file-name) (dap-python--test-at-point)))
          (module (plist-get conf :module)))
